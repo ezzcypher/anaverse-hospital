@@ -11,20 +11,20 @@ is ephemeral). Nothing else changed.
 ## 1 · Create the database (Neon)
 
 1. Sign up at <https://neon.tech> → **New Project** (any name, any region).
-2. On the project dashboard, copy the **Connection string**. It looks like:
-   ```
-   postgresql://neondb_owner:XXXX@ep-cool-name-12345.eu-central-1.aws.neon.tech/neondb?sslmode=require
-   ```
+2. On the dashboard, the **Connection string** box has a **"Pooled connection"** toggle:
+   - toggle **ON**  → copy → this is `DATABASE_URL` (host has `-pooler`)
+   - toggle **OFF** → copy → this is `DIRECT_URL` (host has no `-pooler`)
 
 ## 2 · Point the app at it and load the schema (run locally)
 
 ```bash
 cd D:\anaverse-hospital
 
-# put the Neon string into .env  (replace the whole line)
-#   DATABASE_URL="postgresql://neondb_owner:...@....neon.tech/neondb?sslmode=require"
+# in .env, set both lines:
+#   DATABASE_URL="postgresql://...-pooler....neon.tech/neondb?sslmode=require"
+#   DIRECT_URL="postgresql://...(no -pooler)....neon.tech/neondb?sslmode=require"
 
-npm run db:push      # creates all tables in Neon
+npm run db:push      # creates all tables in Neon (uses DIRECT_URL)
 npm run db:seed      # loads specialties, doctors, FAQ
 npm run build        # sanity check — must end "Compiled successfully"
 ```
@@ -41,7 +41,8 @@ Keep these four values handy:
 
 | Variable | Value |
 | --- | --- |
-| `DATABASE_URL` | the Neon connection string from step 1 |
+| `DATABASE_URL` | Neon **pooled** string (step 1) |
+| `DIRECT_URL` | Neon **direct** string (step 1) |
 | `AUTH_SECRET` | the 96-char hex from above |
 | `IP_HASH_SALT` | the 48-char hex from above |
 | `ADMIN_PASSWORD_HASH` | the `scrypt:...` line from `admin:hash` (paste only the value after `=`) |
@@ -59,6 +60,7 @@ npx vercel                # first run: creates the project + a preview build
 
 # 4b · add the environment variables (paste each value; pick "Production")
 npx vercel env add DATABASE_URL production
+npx vercel env add DIRECT_URL production
 npx vercel env add AUTH_SECRET production
 npx vercel env add IP_HASH_SALT production
 npx vercel env add ADMIN_PASSWORD_HASH production
