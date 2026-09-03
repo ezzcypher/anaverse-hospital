@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Canvas #F4F8FF, brand blue from the palette board (#90CAF9 / #BBDEFB washes,
+       a deeper #1667E6 for anything that has to carry weight). Navy ink for type. */
+    --background: 216 100% 98%;
+    --foreground: 214 76% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 214 76% 11%;
+
+    --primary: 217 83% 49%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 214 90% 95%;
+    --secondary-foreground: 214 76% 11%;
+
+    --muted: 217 45% 94%;
+    --muted-foreground: 216 21% 44%;
+
+    --accent: 209 92% 77%; /* #90CAF9 */
+    --accent-foreground: 214 76% 11%;
+
+    --border: 216 55% 90%;
+    --input: 216 55% 90%;
+    --ring: 217 83% 49%;
+
+    --radius: 0.85rem;
+  }
+
+  .dark {
+    --background: 214 60% 6%;
+    --foreground: 210 40% 96%;
+    --card: 214 50% 9%;
+    --card-foreground: 210 40% 96%;
+    --primary: 209 92% 70%;
+    --primary-foreground: 214 76% 8%;
+    --secondary: 214 40% 14%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 214 34% 16%;
+    --muted-foreground: 214 20% 66%;
+    --accent: 209 70% 40%;
+    --accent-foreground: 210 40% 96%;
+    --border: 214 34% 20%;
+    --input: 214 34% 22%;
+    --ring: 209 92% 70%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "ss01", "cv05";
+  }
+
+  ::selection {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+}
+
+@layer components {
+  .container-x {
+    @apply mx-auto w-full max-w-[1320px] px-6 md:px-10;
+  }
+
+  section[id] {
+    scroll-margin-top: 5rem;
+  }
+
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-primary;
+  }
+
+  .rule {
+    @apply h-px w-full bg-foreground/10;
+  }
+
+  /* Greyscale-to-colour treatment shared by the ambience plates + doctor portraits,
+     with a faint blue duotone so mismatched studio backdrops read as one set. */
+  .photo-mono {
+    filter: grayscale(1) contrast(1.03) brightness(1.02);
+    transition:
+      filter 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .group:hover .photo-mono,
+  .group:focus-within .photo-mono,
+  .photo-mono:hover {
+    filter: grayscale(0) contrast(1);
+  }
+
+  /* Scroll-in reveal — toggled by the <Reveal> IntersectionObserver wrapper. */
+  .reveal-item {
+    opacity: 0;
+    transform: translateY(22px);
+    transition:
+      opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal-item[data-shown="true"] {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .photo-mono,
+  .reveal-item {
+    transition: none;
+  }
+  .reveal-item {
+    opacity: 1;
+    transform: none;
+  }
+}

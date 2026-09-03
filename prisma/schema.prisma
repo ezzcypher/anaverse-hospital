@@ -1,0 +1,185 @@
+// Prisma schema — PostgreSQL (Neon / Supabase / any Postgres).
+//
+// First-time setup (after `npm install`, with DATABASE_URL pointing at your DB):
+//   npm run db:push        # create the tables
+//   npm run db:seed        # load the starter knowledge base
+//
+// Local development can point DATABASE_URL at a free Neon database too — see
+// DEPLOY.md. Nothing is written to the local filesystem.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// A public appointment request. Contains PII (name + phone, optional email),
+/// so it is only ever readable through the authenticated admin API.
+model Appointment {
+  id                  String       @id @default(cuid())
+  reference           String       @unique // short human-facing code, e.g. AV-7F3K2Q
+  name                String
+  phone               String
+  email               String?
+  department          String
+  note                String?
+  reasonForVisit      String?
+  preferredDate       String? // free text as the patient gave it, e.g. "next Tuesday"
+  preferredTime       String?
+  conversationSummary String? // short summary when the request came from the chatbot
+  source              String       @default("web") // web | chatbot
+  status              String       @default("pending") // pending | confirmed | cancelled | completed
+  sourceIpHash        String? // sha256(ip + IP_HASH_SALT) — abuse triage only, never the raw IP
+  chatSession         ChatSession? @relation(fields: [chatSessionId], references: [id], onDelete: SetNull)
+  chatSessionId       String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([source])
+}
+
+/// A general contact-form message. Also PII; admin-only.
+model ContactMessage {
+  id           String   @id @default(cuid())
+  name         String
+  email        String
+  subject      String?
+  body         String
+  sourceIpHash String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+/// Opaque server-side session for the single admin operator. The cookie holds a
+/// random token; only its SHA-256 hash is stored here, so a database leak does
+/// not yield usable sessions. Deleting the row is a real logout (revocation).
+model AdminSession {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  lastSeenAt DateTime @default(now())
+  userAgent  String?
+
+  @@index([expiresAt])
+}
+
+/// ─────────────────────────────────────────────────────────────
+/// AI virtual receptionist
+/// ─────────────────────────────────────────────────────────────
+
+/// One browser chat conversation. `publicId` is what the client's cookie holds;
+/// the numeric `id` is internal. Holds the running "collected" patient details
+/// so the receptionist never re-asks for something already given.
+model ChatSession {
+  id              String   @id @default(cuid())
+  publicId        String   @unique
+  status          String   @default("active") // active | converted | closed
+  leadStatus      String   @default("browsing") // browsing | interested | booking | converted
+  patientName     String?
+  preferredDoctor String?
+  specialty       String?
+  preferredDate   String?
+  preferredTime   String?
+  contactPhone    String?
+  contactEmail    String?
+  reasonForVisit  String?
+  summary         String? // short running summary for the admin
+  emergencyFlag   Boolean  @default(false)
+  sourceIpHash    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastActivityAt  DateTime @default(now())
+
+  messages     ChatMessage[]
+  appointments Appointment[]
+
+  @@index([leadStatus])
+  @@index([lastActivityAt])
+}
+
+model ChatMessage {
+  id        String      @id @default(cuid())
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId String
+  role      String // user | assistant | system
+  content   String
+  createdAt DateTime    @default(now())
+
+  @@index([sessionId, createdAt])
+}
+
+/// Editable clinic knowledge the receptionist answers from.
+model KnowledgeItem {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  category  String // clinic | hours | location | contact | policy | faq | service | insurance
+  title     String
+  content   String
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category, sortOrder])
+}
+
+model Specialty {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  keywords    String? // comma-separated symptom/topic keywords for triage matching
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([sortOrder])
+}
+
+model Doctor {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  title           String // e.g. "Consultant Cardiologist"
+  specialty       String? // display specialty; loose link to Specialty.name
+  bio             String?
+  yearsExperience Int?
+  consultationFee String?
+  languages       String?
+  photo           String?
+  active          Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([sortOrder])
+}
+
+/// Outbound WhatsApp messages. In demo mode these are `simulated` and only ever
+/// shown in the admin dashboard; in production they are sent via the configured
+/// provider and the status becomes `sent` / `failed`.
+model WhatsappMessage {
+  id            String    @id @default(cuid())
+  template      String // admin_notification | confirmation | reminder | followup
+  toPhone       String
+  body          String
+  status        String    @default("simulated") // simulated | queued | sent | failed
+  mode          String    @default("demo") // demo | production
+  appointmentId String?
+  chatSessionId String?
+  error         String?
+  createdAt     DateTime  @default(now())
+  sentAt        DateTime?
+
+  @@index([createdAt])
+  @@index([appointmentId])
+}
