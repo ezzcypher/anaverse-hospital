@@ -36,20 +36,31 @@ function fail(problems: string[]): never {
   );
 }
 
+/**
+ * Trim whitespace (including a trailing newline some dashboards' paste boxes
+ * add) and strip one layer of accidentally-included surrounding quotes — a
+ * common mistake when copying a `KEY="value"` line from a .env file and
+ * pasting just the value into a web form that doesn't expect the quotes.
+ */
+function clean(v: string | undefined): string | undefined {
+  if (v === undefined) return undefined;
+  const trimmed = v.trim();
+  const quoted = trimmed.match(/^(["'])([\s\S]*)\1$/);
+  return quoted ? quoted[2].trim() : trimmed;
+}
+
 export function serverEnv(): ServerEnv {
   if (cached) return cached;
 
   const problems: string[] = [];
-  const {
-    DATABASE_URL,
-    AUTH_SECRET,
-    IP_HASH_SALT,
-    ADMIN_PASSWORD_HASH,
-    ALLOWED_ORIGINS,
-    NODE_ENV,
-  } = process.env;
+  const DATABASE_URL = clean(process.env.DATABASE_URL);
+  const AUTH_SECRET = clean(process.env.AUTH_SECRET);
+  const IP_HASH_SALT = clean(process.env.IP_HASH_SALT);
+  const ADMIN_PASSWORD_HASH = clean(process.env.ADMIN_PASSWORD_HASH);
+  const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS;
+  const NODE_ENV = process.env.NODE_ENV;
 
-  if (!DATABASE_URL || DATABASE_URL.trim() === "") {
+  if (!DATABASE_URL) {
     problems.push("DATABASE_URL is required (e.g. file:./dev.db)");
   }
   if (!AUTH_SECRET || AUTH_SECRET.length < 32) {
