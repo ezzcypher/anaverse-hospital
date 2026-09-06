@@ -91,14 +91,29 @@ export function Ambience() {
         </div>
       </div>
 
-      {/* Full-bleed plate */}
-      <Reveal className="relative left-1/2 right-1/2 -mx-[50vw] w-screen">
-        <Plate
-          src={SPACE_PLATES.wide.src}
-          label={SPACE_PLATES.wide.label}
-          className="h-[52vh] min-h-[340px] w-full rounded-none md:h-[68vh]"
-        />
-      </Reveal>
+      {/* The day-clinic corridor — contained, with a note about the space */}
+      <div className="container-x pb-6 pt-4 md:pb-10">
+        <div className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
+          <Reveal>
+            <Plate
+              src={SPACE_PLATES.wide.src}
+              label={SPACE_PLATES.wide.label}
+              className="aspect-[16/10] w-full"
+            />
+          </Reveal>
+          <Reveal delay={120}>
+            <h3 className="font-display text-[clamp(20px,2.6vw,30px)] font-medium leading-[1.25] tracking-tightest text-foreground">
+              The day-clinic corridor
+            </h3>
+            <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-muted-foreground">
+              Deliberately unhurried. It is wide enough for a wheelchair and a
+              walking partner side by side, glazed the full length so there is
+              always a view out, and quiet enough that a waiting area never
+              quite feels like one. Seats are spaced for privacy, not capacity.
+            </p>
+          </Reveal>
+        </div>
+      </div>
 
       <div className="container-x py-24 md:py-28">
         <div className="grid items-end gap-8 md:grid-cols-2 md:gap-12">
